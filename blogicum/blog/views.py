@@ -36,7 +36,7 @@ class CategoryList(ListView):
                                    pub_date__lte=timezone.now(),
                                    ).annotate(
                                        comment_count=Count('comment')
-                                       ).order_by('-pub_date')
+                                   ).order_by('-pub_date')
 
     def get_context_data(self, **kwargs):
         """Добавляем в контекст категорию постов."""
@@ -64,7 +64,7 @@ class Index(ListView):
             pub_date__lte=timezone.now(),
             ).annotate(
                 comment_count=Count('comment')
-                ).order_by('-pub_date')
+            ).order_by('-pub_date')
         return queryset
 
 
