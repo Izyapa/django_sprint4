@@ -106,7 +106,7 @@ class Post(PublishedModel):
                        kwargs={'username': self.author.username})
 
 
-class Comment(models.Model):    
+class Comment(models.Model):
     """Класс коммент."""
 
     text = models.TextField('Комментарий')
