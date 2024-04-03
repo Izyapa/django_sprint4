@@ -116,7 +116,8 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         """Подставляем в форму значения автора и поста."""
         post_id = self.kwargs.get('post_id')
         post = get_object_or_404(Post, pk=post_id)
-        if (post.is_published and post.category.is_published and post.pub_date <= timezone.now()):
+        if (post.is_published and post.category.is_published
+                and post.pub_date <= timezone.now()):
             form.instance.post = post
             form.instance.author = self.request.user
             return super().form_valid(form)
@@ -162,7 +163,7 @@ class PostDetailView(DetailView):
         """Проверяем доступность поста для текущего пользователя."""
         post = self.get_object()
         if request.user != post.author:
-            if (not post.is_published or not post.category.is_published 
+            if (not post.is_published or not post.category.is_published
                     or post.pub_date > timezone.now()):
                 raise Http404("Post does not exist")
         return super().dispatch(request, *args, **kwargs)
