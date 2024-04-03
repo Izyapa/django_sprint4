@@ -1,9 +1,7 @@
-from django.db import models
-# Импортируем функцию reverse() для получения ссылки на объект.
-from django.urls import reverse
+from django.db import models  # type: ignore
 from django.contrib.auth.models import User
 from core.models import PublishedModel
-from .validators import age_protect
+from django.urls import reverse
 
 
 class Category(PublishedModel):
@@ -24,7 +22,8 @@ class Category(PublishedModel):
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Переопределяем метод str."""
         return self.title
 
 
@@ -39,7 +38,8 @@ class Location(PublishedModel):
         verbose_name = 'местоположение'
         verbose_name_plural = 'Местоположения'
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Переопределяем метод str."""
         return self.name
 
 
@@ -51,8 +51,7 @@ class Post(PublishedModel):
     pub_date = models.DateTimeField(
         'Дата и время публикации',
         help_text='Если установить дату и время в будущем '
-        '— можно делать отложенные публикации.',
-        validators=(age_protect,)
+        '— можно делать отложенные публикации.'
     )
     author = models.ForeignKey(
         User,
@@ -97,14 +96,19 @@ class Post(PublishedModel):
             ),
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Переопределяем метод str."""
         return self.title
 
     def get_absolute_url(self):
-        return reverse('blog:post_detail', kwargs={'pk': self.pk})
+        """Возвращаем URL для профиля пользователя, используя его username."""
+        return reverse('blog:profile',
+                       kwargs={'username': self.author.username})
 
 
-class Comment(models.Model):
+class Comment(models.Model):    
+    """Класс коммент."""
+
     text = models.TextField('Комментарий')
     post = models.ForeignKey(
         Post,
@@ -115,4 +119,17 @@ class Comment(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
+        """Класс мета."""
+
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'Комментарии'
         ordering = ('created_at',)
+
+    def __str__(self) -> str:
+        """Переопределяем метод str."""
+        return self.text
+
+    def get_absolute_url(self):
+        """Возвращаем URL для профиля пользователя, используя его username."""
+        return reverse('blog:post_detail',
+                       kwargs={'post_id': self.post_id})

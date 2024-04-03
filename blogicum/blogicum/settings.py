@@ -87,6 +87,7 @@ WSGI_APPLICATION = 'blogicum.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+# 1) За подключение и настройку БД в проекте отвечает константа DATABASES
 
 DATABASES = {
     'default': {
@@ -159,7 +160,7 @@ LOGIN_REDIRECT_URL = 'blog:index'
 LOGIN_URL = 'login'
 
 # Имя view-функции, обрабатывающей ошибку 403
-CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
+CSRF_FAILURE_VIEW = 'pages.views.csrf_failure'
 
 # Добавьте в settings.py эту константу, чтобы DjDT знал,
 # запросы с каких IP он должен обрабатывать.

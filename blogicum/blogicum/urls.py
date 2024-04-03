@@ -21,6 +21,7 @@ from django.contrib import admin
 from django.urls import include, path, reverse_lazy
 from django.contrib.auth.forms import UserCreationForm
 from django.views.generic.edit import CreateView
+import debug_toolbar
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -41,20 +42,12 @@ urlpatterns = [
     ),
 ]
 
-# Адрес view-функции с ошибкой 404 хранится в переменной handler404
-# (по умолчанию это view-функция django.views.defaults.page_not_found).
-# НО, обрабатывающей ошибку 403, указывается в settings.py,
-# в константе CSRF_FAILURE_VIEW.
-handler404 = 'core.views.page_not_found'
-handler403 = 'core.views.csrf_failure'
-handler500 = 'core.views.server_error'
 
-# Если проект запущен в режиме разработки...
+handler404 = 'pages.views.page_not_found'
+handler403 = 'pages.views.csrf_failure'
+handler500 = 'pages.views.server_error'
+
 if settings.DEBUG:
-    import debug_toolbar
-    # Добавить к списку urlpatterns список адресов из приложения debug_toolbar:
     urlpatterns += (path('__debug__/', include(debug_toolbar.urls)),)
 
-# В конце добавляем к списку вызов функции static для image
-# Подключаем функцию static() к urlpatterns:
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
