@@ -92,8 +92,8 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('blog:profile', kwargs={'username':
-                                                    self.request.user.username})
+        return reverse_lazy('blog:profile',
+                            kwargs={'username': self.request.user.username})
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
@@ -179,8 +179,8 @@ class ProfileUpdateView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         """Получение URL для перенаправления при успешной валидации формы."""
-        return reverse_lazy('blog:profile', kwargs={'username':
-                                                    self.request.user.username})
+        return reverse_lazy('blog:profile',
+                            kwargs={'username': self.request.user.username})
 
     def form_valid(self, form):
         """Сохранение формы и перенаправление на страницу профиля."""
