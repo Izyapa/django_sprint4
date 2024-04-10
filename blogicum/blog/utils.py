@@ -1,4 +1,4 @@
-"""Импорт модулей.""" 
+"""Импорт модулей."""
 from django.db.models import Count
 
 

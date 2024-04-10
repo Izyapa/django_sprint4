@@ -1,7 +1,6 @@
 """Модуль для описания представлений и форм блога."""
 from django.contrib.auth.mixins import LoginRequiredMixin  # type: ignore
 from django.contrib.auth.models import User  # type: ignore
-from django.db.models import Count  # type: ignore
 from django.http import Http404  # type: ignore
 from django.shortcuts import get_object_or_404, redirect  # type: ignore
 from django.urls import reverse, reverse_lazy  # type: ignore
@@ -28,7 +27,8 @@ class CategoryList(ListView):
 
     def get_queryset(self):
         category_slug = self.kwargs.get('category_slug')
-        category = get_object_or_404(Category, slug=category_slug, is_published=True)
+        category = get_object_or_404(Category, slug=category_slug,
+                                     is_published=True)
         queryset = category.posts_at_category.filter(
             is_published=True,
             pub_date__lte=timezone.now()
@@ -92,7 +92,8 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
+        return reverse_lazy('blog:profile', kwargs={'username':
+                                                    self.request.user.username})
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
@@ -178,7 +179,8 @@ class ProfileUpdateView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         """Получение URL для перенаправления при успешной валидации формы."""
-        return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
+        return reverse_lazy('blog:profile', kwargs={'username':
+                                                    self.request.user.username})
 
     def form_valid(self, form):
         """Сохранение формы и перенаправление на страницу профиля."""
@@ -206,7 +208,6 @@ class PostDeleteView(OnlyAuthorMixin, DeleteView):
         """Добавление формы с instance в контекст."""
         form = PostCreateForm(
             instance=get_object_or_404(Post,
-                                       pk=post_id,
                                        author=self.request.user))
         return super().get_context_data(form=form, **kwargs)
 
