@@ -27,7 +27,7 @@ class CommentForm(forms.ModelForm):
         fields = ('text',)
 
 
-class CustomProfileForm(UserChangeForm):
+class ProfileForm(UserChangeForm):
     """Форма пользователя."""
 
     class Meta:

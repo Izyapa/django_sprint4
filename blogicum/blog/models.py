@@ -1,7 +1,21 @@
+"""Модуль для описания моделей."""
+from django.contrib.auth.models import User  # type: ignore
 from django.db import models  # type: ignore
-from django.contrib.auth.models import User
-from core.models import PublishedModel
-from django.urls import reverse
+from django.urls import reverse  # type: ignore
+
+
+class PublishedModel(models.Model):
+    """Абстрактная модель. Добвляет флаг is_published и created_at."""
+
+    is_published = models.BooleanField(
+        'Опубликовано', default=True,
+        help_text='Снимите галочку, чтобы скрыть публикацию.')
+    created_at = models.DateTimeField('Добавлено', auto_now_add=True,
+                                      auto_now=False)
+
+    class Meta:
+
+        abstract = True
 
 
 class Category(PublishedModel):
@@ -13,18 +27,17 @@ class Category(PublishedModel):
         'Идентификатор',
         unique=True,
         help_text='Идентификатор страницы для URL; '
-        'разрешены символы латиницы, цифры, дефис и подчёркивание.'
+                  'разрешены символы латиницы, цифры, дефис и подчёркивание.'
     )
 
     class Meta:
-        """Класс мета."""
 
         verbose_name = 'категория'
         verbose_name_plural = 'Категории'
 
     def __str__(self) -> str:
         """Переопределяем метод str."""
-        return self.title
+        return self.title[:10]
 
 
 class Location(PublishedModel):
@@ -33,14 +46,13 @@ class Location(PublishedModel):
     name = models.CharField('Название места', max_length=256)
 
     class Meta:
-        """Класс мета."""
 
         verbose_name = 'местоположение'
         verbose_name_plural = 'Местоположения'
 
     def __str__(self) -> str:
         """Переопределяем метод str."""
-        return self.name
+        return self.name[:10]
 
 
 class Post(PublishedModel):
@@ -56,9 +68,7 @@ class Post(PublishedModel):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        blank=False,
-        null=True,
-        related_name='author',
+        related_name='posts_written',
         verbose_name='Автор публикации'
     )
     location = models.ForeignKey(
@@ -66,15 +76,14 @@ class Post(PublishedModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='location',
+        related_name='posts_at_location',
         verbose_name='Местоположение'
     )
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
-        blank=False,
         null=True,
-        related_name='category',
+        related_name='posts_at_category',
         verbose_name='Категория'
     )
     image = models.ImageField('Фото к публикации',
@@ -83,12 +92,10 @@ class Post(PublishedModel):
                               )
 
     class Meta:
-        """Класс мета."""
 
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
         ordering = ('-pub_date',)
-        # С помощью нижней кон-ции сделаем сов-ть полей в fields ун-ой
         constraints = (
             models.UniqueConstraint(
                 fields=('title', 'text'),
@@ -97,13 +104,10 @@ class Post(PublishedModel):
         )
 
     def __str__(self) -> str:
-        """Переопределяем метод str."""
-        return self.title
+        return self.title[:10]
 
     def get_absolute_url(self):
-        """Возвращаем URL для профиля пользователя, используя его username."""
-        return reverse('blog:profile',
-                       kwargs={'username': self.author.username})
+        return reverse('blog:post_detail', kwargs={'post_id': self.pk})
 
 
 class Comment(models.Model):
@@ -113,10 +117,13 @@ class Comment(models.Model):
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
-        related_name='comment',
+        related_name='posts_comments',
+        verbose_name='Пост'
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE,
+                               verbose_name='Автор публикации',
+                               related_name='comments_autors')
 
     class Meta:
         """Класс мета."""
@@ -127,9 +134,4 @@ class Comment(models.Model):
 
     def __str__(self) -> str:
         """Переопределяем метод str."""
-        return self.text
-
-    def get_absolute_url(self):
-        """Возвращаем URL для профиля пользователя, используя его username."""
-        return reverse('blog:post_detail',
-                       kwargs={'post_id': self.post_id})
+        return self.text[:10]
