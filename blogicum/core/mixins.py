@@ -8,8 +8,7 @@ class OnlyAuthorMixin(UserPassesTestMixin):
 
     def test_func(self):
         """Проверка на авторство."""
-        object = self.get_object()
-        return object.author == self.request.user
+        return self.get_object().author == self.request.user
 
     def handle_no_permission(self):
         """Перенаправляет неавторов."""

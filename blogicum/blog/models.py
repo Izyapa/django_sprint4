@@ -68,7 +68,7 @@ class Post(PublishedModel):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='posts_written',
+        related_name='posts',
         verbose_name='Автор публикации'
     )
     location = models.ForeignKey(
@@ -76,14 +76,14 @@ class Post(PublishedModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='posts_at_location',
+        related_name='posts',
         verbose_name='Местоположение'
     )
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='posts_at_category',
+        related_name='posts',
         verbose_name='Категория'
     )
     image = models.ImageField('Фото к публикации',
@@ -117,13 +117,13 @@ class Comment(models.Model):
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
-        related_name='posts_comments',
+        related_name='comments',
         verbose_name='Пост'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE,
                                verbose_name='Автор публикации',
-                               related_name='comments_autors')
+                               related_name='comments')
 
     class Meta:
         """Класс мета."""

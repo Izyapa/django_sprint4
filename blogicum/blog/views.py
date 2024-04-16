@@ -12,7 +12,8 @@ from django.views.generic.edit import FormView  # type: ignore
 
 from blog.forms import PostCreateForm, CommentForm, ProfileForm
 from blog.models import Post, Comment, Category
-from blog.utils import annotate_comments_and_order
+from blog.utils import (
+    annotate_comments_and_order, filter_publ_date_annotate_comments)
 from core.mixins import OnlyAuthorMixin
 
 COUNT_PAGINATE = 10
@@ -25,22 +26,18 @@ class CategoryList(ListView):
     model = Post
     paginate_by = COUNT_PAGINATE
 
+    def get_category(self):
+        return get_object_or_404(Category,
+                                 slug=self.kwargs['category_slug'],
+                                 is_published=True)
+
     def get_queryset(self):
-        category_slug = self.kwargs.get('category_slug')
-        category = get_object_or_404(Category, slug=category_slug,
-                                     is_published=True)
-        queryset = category.posts_at_category.filter(
-            is_published=True,
-            pub_date__lte=timezone.now()
-        )
-        return annotate_comments_and_order(queryset)
+        category = self.get_category()
+        return filter_publ_date_annotate_comments(category)
 
     def get_context_data(self, **kwargs):
         """Добавляем в контекст категорию постов."""
-        category_slug = self.kwargs['category_slug']
-        category = get_object_or_404(Category,
-                                     slug=category_slug,
-                                     is_published=True)
+        category = self.get_category()
         return super().get_context_data(category=category, **kwargs)
 
 
@@ -50,15 +47,13 @@ class Index(ListView):
     template_name = 'blog/index.html'
     model = Post
     paginate_by = COUNT_PAGINATE
-
-    def get_queryset(self):
-        """Выбор публичных постов, добавляем кол-во комментариев."""
-        queryset = super().get_queryset().filter(
+    queryset = annotate_comments_and_order(
+        Post.objects.filter(
             is_published=True,
             category__is_published=True,
             pub_date__lte=timezone.now(),
         )
-        return annotate_comments_and_order(queryset)
+    )
 
 
 class ProfileDetailView(ListView):
@@ -68,15 +63,20 @@ class ProfileDetailView(ListView):
     model = Post
     paginate_by = COUNT_PAGINATE
 
+    def get_author(self):
+        return get_object_or_404(User, username=self.kwargs['username'])
+
     def get_queryset(self):
         """Выбор постов по автору, добавляем кол-во комментариев."""
-        user = get_object_or_404(User, username=self.kwargs['username'])
-        return annotate_comments_and_order(user.posts_written.all())
+        if self.get_author() == self.request.user:
+            return annotate_comments_and_order(self.get_author().posts.all())
+        return annotate_comments_and_order(self.get_author().posts.filter(
+            is_published=True,
+            category__is_published=True))
 
     def get_context_data(self, **kwargs):
         """Добавляем в контекст данные профиля."""
-        profile = get_object_or_404(User, username=self.kwargs['username'])
-        return super().get_context_data(profile=profile, **kwargs)
+        return super().get_context_data(profile=self.get_author(), **kwargs)
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -92,8 +92,8 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('blog:profile',
-                            kwargs={'username': self.request.user.username})
+        return reverse('blog:profile',
+                       args=[self.request.user.username])
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
@@ -103,11 +103,16 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     form_class = CommentForm
     template_name = 'blog/detail.html'
 
+    def is_post_published(self):
+        """Проверяет, опубликован ли пост."""
+        post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
+        return (post.is_published and post.category.is_published
+                and post.pub_date <= timezone.now())
+
     def form_valid(self, form):
         """Подставляем в форму значения автора и поста."""
-        post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
-        if (post.is_published and post.category.is_published
-                and post.pub_date <= timezone.now()):
+        if self.is_post_published():
+            post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
             form.instance.post = post
             form.instance.author = self.request.user
             return super().form_valid(form)
@@ -115,7 +120,7 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         """Переадресация."""
         return reverse('blog:post_detail',
-                       kwargs={'post_id': self.kwargs.get('post_id')})
+                       args=[self.kwargs.get('post_id')])
 
 
 class PostUpdateView(OnlyAuthorMixin, UpdateView):
@@ -138,7 +143,7 @@ class CommentUpdateView(OnlyAuthorMixin, UpdateView):
     def get_success_url(self):
         """Переадресация."""
         return reverse('blog:post_detail',
-                       kwargs={'post_id': self.kwargs.get('post_id')})
+                       args=[self.kwargs.get('post_id')])
 
 
 class PostDetailView(DetailView):
@@ -148,27 +153,70 @@ class PostDetailView(DetailView):
     template_name = 'blog/detail.html'
     pk_url_kwarg = 'post_id'
 
+    # def get_context_data(self, **kwargs): 
+    #     """Добавляем форму и оптимизируем запрос."""
+    #     comments = (
+    #         self.object.comments.select_related('author')
+    #     )
+    #     return super().get_context_data(form=CommentForm(),
+    #                                     comments=comments,
+    #                                     **kwargs)
+
+    # def check_post_availability(self, post):
+    #     """Проверка доступности поста для текущего пользователя."""
+    #     if not (post.is_published and post.category.is_published
+    #             and post.pub_date <= timezone.now()):
+    #         raise Http404("Post does not exist")
+
+    # def dispatch(self, request, *args, **kwargs):
+    #     """Проверяем доступность поста для текущего пользователя."""
+    #     post = self.get_object() 
+    #     if request.user != post.author: 
+    #         self.check_post_availability(post) 
+    #     return super().dispatch(request, *args, **kwargs)
+# 1111
+    # def get_context_data(self, **kwargs):
+    #     """Добавляем форму и оптимизируем запрос."""
+    #     comments = (
+    #         self.object.comments.select_related('author')
+    #     )
+    #     return super().get_context_data(form=CommentForm(),
+    #                                     comments=comments,
+    #                                     **kwargs)
+
+    # def check_authors(self):
+    #     """Проверка доступности поста для текущего пользователя."""
+    #     post = get_object_or_404(Post, pk=self.pk_url_kwarg)
+    #     if self.request.user == post.author.username:
+    #         return get_object_or_404(Post, pk=self.pk_url_kwarg,
+    #                                  is_published=True,
+    #                                  category__is_published=True,
+    #                                  pub_date__lte=timezone.now())
+    #     return post
+
     def get_context_data(self, **kwargs):
         """Добавляем форму и оптимизируем запрос."""
         comments = (
-            self.object.posts_comments.select_related('author')
+            self.object.comments.select_related('author')
         )
-        return super().get_context_data(form=CommentForm(),
-                                        comments=comments,
-                                        **kwargs)
+        post = self.check_authors()
+        print("Пост доступен для текущего пользователя:", post)
+        if post:
+            return super().get_context_data(post=post,
+                                            form=CommentForm(),
+                                            comments=comments,
+                                            **kwargs)
 
-    def check_post_availability(self, post):
+    def check_authors(self):
         """Проверка доступности поста для текущего пользователя."""
-        if not (post.is_published and post.category.is_published
-                and post.pub_date <= timezone.now()):
-            raise Http404("Post does not exist")
-
-    def dispatch(self, request, *args, **kwargs):
-        """Проверяем доступность поста для текущего пользователя."""
-        post = self.get_object()
-        if request.user != post.author:
-            self.check_post_availability(post)
-        return super().dispatch(request, *args, **kwargs)
+        post = get_object_or_404(Post, pk=self.kwargs.get(self.pk_url_kwarg))
+        print('---------FFFFFFFFFFFF----------')
+        if self.request.user == post.author.username:
+            return get_object_or_404(Post, pk=self.kwargs.get(self.pk_url_kwarg),
+                                     is_published=True,
+                                     category__is_published=True,
+                                     pub_date__lte=timezone.now())
+        return post
 
 
 class ProfileUpdateView(LoginRequiredMixin, FormView):
@@ -179,8 +227,8 @@ class ProfileUpdateView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         """Получение URL для перенаправления при успешной валидации формы."""
-        return reverse_lazy('blog:profile',
-                            kwargs={'username': self.request.user.username})
+        return reverse('blog:profile',
+                       args=[self.request.user.username])
 
     def form_valid(self, form):
         """Сохранение формы и перенаправление на страницу профиля."""
