@@ -15,7 +15,7 @@ def filter_publ_date(object):
     return object.posts.filter(
         is_published=True,
         pub_date__lte=timezone.now()
-        )
+    )
 
 
 def filter_publ_date_annotate_comments(object):
