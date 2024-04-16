@@ -3,7 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin  # type: ignore
 from django.contrib.auth.models import User  # type: ignore
 from django.http import Http404  # type: ignore
 from django.shortcuts import get_object_or_404, redirect  # type: ignore
-from django.urls import reverse, reverse_lazy  # type: ignore
+from django.urls import reverse  # type: ignore
 from django.utils import timezone  # type: ignore
 from django.views.generic import (  # type: ignore
     CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -153,7 +153,7 @@ class PostDetailView(DetailView):
     template_name = 'blog/detail.html'
     pk_url_kwarg = 'post_id'
 
-    def get_context_data(self, **kwargs): 
+    def get_context_data(self, **kwargs):
         """Добавляем форму и оптимизируем запрос."""
         comments = (
             self.object.comments.select_related('author')

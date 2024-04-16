@@ -13,8 +13,8 @@ def annotate_comments_and_order(queryset):
 def filter_publ_date(object):
     """Выбор актуальных публичных постов."""
     return object.posts.filter(
-            is_published=True,
-            pub_date__lte=timezone.now()
+        is_published=True,
+        pub_date__lte=timezone.now()
         )
 
 
