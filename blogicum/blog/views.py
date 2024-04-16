@@ -153,70 +153,36 @@ class PostDetailView(DetailView):
     template_name = 'blog/detail.html'
     pk_url_kwarg = 'post_id'
 
-    # def get_context_data(self, **kwargs): 
-    #     """Добавляем форму и оптимизируем запрос."""
-    #     comments = (
-    #         self.object.comments.select_related('author')
-    #     )
-    #     return super().get_context_data(form=CommentForm(),
-    #                                     comments=comments,
-    #                                     **kwargs)
-
-    # def check_post_availability(self, post):
-    #     """Проверка доступности поста для текущего пользователя."""
-    #     if not (post.is_published and post.category.is_published
-    #             and post.pub_date <= timezone.now()):
-    #         raise Http404("Post does not exist")
-
-    # def dispatch(self, request, *args, **kwargs):
-    #     """Проверяем доступность поста для текущего пользователя."""
-    #     post = self.get_object() 
-    #     if request.user != post.author: 
-    #         self.check_post_availability(post) 
-    #     return super().dispatch(request, *args, **kwargs)
-# 1111
-    # def get_context_data(self, **kwargs):
-    #     """Добавляем форму и оптимизируем запрос."""
-    #     comments = (
-    #         self.object.comments.select_related('author')
-    #     )
-    #     return super().get_context_data(form=CommentForm(),
-    #                                     comments=comments,
-    #                                     **kwargs)
-
-    # def check_authors(self):
-    #     """Проверка доступности поста для текущего пользователя."""
-    #     post = get_object_or_404(Post, pk=self.pk_url_kwarg)
-    #     if self.request.user == post.author.username:
-    #         return get_object_or_404(Post, pk=self.pk_url_kwarg,
-    #                                  is_published=True,
-    #                                  category__is_published=True,
-    #                                  pub_date__lte=timezone.now())
-    #     return post
-
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs): 
         """Добавляем форму и оптимизируем запрос."""
         comments = (
             self.object.comments.select_related('author')
         )
-        post = self.check_authors()
-        print("Пост доступен для текущего пользователя:", post)
-        if post:
-            return super().get_context_data(post=post,
-                                            form=CommentForm(),
-                                            comments=comments,
-                                            **kwargs)
+        return super().get_context_data(form=CommentForm(),
+                                        comments=comments,
+                                        **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if request.user != self.object.author:
+            self.check_post_availability(self.object)
+        return super().get(request, *args, **kwargs)
 
     def check_authors(self):
+        return get_object_or_404(
+            Post,
+            pk=self.kwargs.get(self.pk_url_kwarg),
+            is_published=True,
+            category__is_published=True,
+            pub_date__lte=timezone.now(),
+            author=self.request.user
+        )
+
+    def check_post_availability(self, post):
         """Проверка доступности поста для текущего пользователя."""
-        post = get_object_or_404(Post, pk=self.kwargs.get(self.pk_url_kwarg))
-        print('---------FFFFFFFFFFFF----------')
-        if self.request.user == post.author.username:
-            return get_object_or_404(Post, pk=self.kwargs.get(self.pk_url_kwarg),
-                                     is_published=True,
-                                     category__is_published=True,
-                                     pub_date__lte=timezone.now())
-        return post
+        if not (post.is_published and post.category.is_published
+                and post.pub_date <= timezone.now()):
+            raise Http404("Post does not exist")
 
 
 class ProfileUpdateView(LoginRequiredMixin, FormView):
