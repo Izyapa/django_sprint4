@@ -1,7 +1,7 @@
 """Модуль для описания форм."""
-from django import forms  # type: ignore
-from django.contrib.auth.forms import UserChangeForm  # type: ignore
-from django.contrib.auth.models import User  # type: ignore
+from django import forms
+from django.contrib.auth.forms import UserChangeForm
+from django.contrib.auth.models import User
 
 from .models import Post, Comment
 

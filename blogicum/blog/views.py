@@ -1,19 +1,22 @@
 """Модуль для описания представлений и форм блога."""
-from django.contrib.auth.mixins import LoginRequiredMixin  # type: ignore
-from django.contrib.auth.models import User  # type: ignore
-from django.http import Http404  # type: ignore
-from django.shortcuts import get_object_or_404, redirect  # type: ignore
-from django.urls import reverse  # type: ignore
-from django.utils import timezone  # type: ignore
-from django.views.generic import (  # type: ignore
+from typing import Any
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import User
+from django.db.models.base import Model as Model
+from django.db.models.query import QuerySet
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
+from django.utils import timezone
+from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, UpdateView
 )
-from django.views.generic.edit import FormView  # type: ignore
+from django.views.generic.edit import FormView
 
 from blog.forms import PostCreateForm, CommentForm, ProfileForm
 from blog.models import Post, Comment, Category
 from blog.utils import (
-    annotate_comments_and_order, filter_publ_date_annotate_comments)
+    annotate_comments_and_order, filter_published_date_annotate_comments)
 from core.mixins import OnlyAuthorMixin
 
 COUNT_PAGINATE = 10
@@ -32,13 +35,13 @@ class CategoryList(ListView):
                                  is_published=True)
 
     def get_queryset(self):
-        category = self.get_category()
-        return filter_publ_date_annotate_comments(category)
+        return filter_published_date_annotate_comments(
+            self.get_category().posts
+            )
 
     def get_context_data(self, **kwargs):
         """Добавляем в контекст категорию постов."""
-        category = self.get_category()
-        return super().get_context_data(category=category, **kwargs)
+        return super().get_context_data(category=self.get_category(), **kwargs)
 
 
 class Index(ListView):
@@ -47,13 +50,7 @@ class Index(ListView):
     template_name = 'blog/index.html'
     model = Post
     paginate_by = COUNT_PAGINATE
-    queryset = annotate_comments_and_order(
-        Post.objects.filter(
-            is_published=True,
-            category__is_published=True,
-            pub_date__lte=timezone.now(),
-        )
-    )
+    queryset = filter_published_date_annotate_comments(Post.objects)
 
 
 class ProfileDetailView(ListView):
@@ -70,9 +67,7 @@ class ProfileDetailView(ListView):
         """Выбор постов по автору, добавляем кол-во комментариев."""
         if self.get_author() == self.request.user:
             return annotate_comments_and_order(self.get_author().posts.all())
-        return annotate_comments_and_order(self.get_author().posts.filter(
-            is_published=True,
-            category__is_published=True))
+        return filter_published_date_annotate_comments(Post.objects)
 
     def get_context_data(self, **kwargs):
         """Добавляем в контекст данные профиля."""
@@ -103,19 +98,12 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     form_class = CommentForm
     template_name = 'blog/detail.html'
 
-    def is_post_published(self):
-        """Проверяет, опубликован ли пост."""
-        post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
-        return (post.is_published and post.category.is_published
-                and post.pub_date <= timezone.now())
-
     def form_valid(self, form):
         """Подставляем в форму значения автора и поста."""
-        if self.is_post_published():
-            post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
-            form.instance.post = post
-            form.instance.author = self.request.user
-            return super().form_valid(form)
+        post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
+        form.instance.post = post
+        form.instance.author = self.request.user
+        return super().form_valid(form)
 
     def get_success_url(self):
         """Переадресация."""
@@ -153,36 +141,28 @@ class PostDetailView(DetailView):
     template_name = 'blog/detail.html'
     pk_url_kwarg = 'post_id'
 
+    def get_object(self, queryset=None):
+        queryset = self.get_queryset()
+        obj = super().get_object(queryset=queryset)
+        if self.request.user == obj.author:
+            return get_object_or_404(
+                queryset,
+                pk=self.kwargs.get(self.pk_url_kwarg)
+            )
+        return get_object_or_404(
+                queryset,
+                pk=self.kwargs.get(self.pk_url_kwarg),
+                is_published=True,
+                category__is_published=True
+            )
+
     def get_context_data(self, **kwargs):
         """Добавляем форму и оптимизируем запрос."""
-        comments = (
-            self.object.comments.select_related('author')
-        )
-        return super().get_context_data(form=CommentForm(),
-                                        comments=comments,
-                                        **kwargs)
-
-    def get(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        if request.user != self.object.author:
-            self.check_post_availability(self.object)
-        return super().get(request, *args, **kwargs)
-
-    def check_authors(self):
-        return get_object_or_404(
-            Post,
-            pk=self.kwargs.get(self.pk_url_kwarg),
-            is_published=True,
-            category__is_published=True,
-            pub_date__lte=timezone.now(),
-            author=self.request.user
-        )
-
-    def check_post_availability(self, post):
-        """Проверка доступности поста для текущего пользователя."""
-        if not (post.is_published and post.category.is_published
-                and post.pub_date <= timezone.now()):
-            raise Http404("Post does not exist")
+        return super().get_context_data(
+            form=CommentForm(),
+            comments=self.object.comments.select_related('author'),
+            **kwargs
+            )
 
 
 class ProfileUpdateView(LoginRequiredMixin, FormView):

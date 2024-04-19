@@ -1,17 +1,22 @@
 """Модуль для описания моделей."""
-from django.contrib.auth.models import User  # type: ignore
-from django.db import models  # type: ignore
-from django.urls import reverse  # type: ignore
+from django.contrib.auth.models import User
+from django.db import models
+from django.urls import reverse
 
 
 class PublishedModel(models.Model):
     """Абстрактная модель. Добвляет флаг is_published и created_at."""
 
     is_published = models.BooleanField(
-        'Опубликовано', default=True,
-        help_text='Снимите галочку, чтобы скрыть публикацию.')
-    created_at = models.DateTimeField('Добавлено', auto_now_add=True,
-                                      auto_now=False)
+        'Опубликовано',
+        default=True,
+        help_text='Снимите галочку, чтобы скрыть публикацию.'
+    )
+    created_at = models.DateTimeField(
+        'Добавлено',
+        auto_now_add=True,
+        auto_now=False
+    )
 
     class Meta:
 
@@ -21,7 +26,10 @@ class PublishedModel(models.Model):
 class Category(PublishedModel):
     """Модель Категория."""
 
-    title = models.CharField('Заголовок', max_length=256)
+    title = models.CharField(
+        'Заголовок',
+        max_length=256
+    )
     description = models.TextField('Описание')
     slug = models.SlugField(
         'Идентификатор',
@@ -43,7 +51,10 @@ class Category(PublishedModel):
 class Location(PublishedModel):
     """Модель Локация."""
 
-    name = models.CharField('Название места', max_length=256)
+    name = models.CharField(
+        'Название места',
+        max_length=256
+    )
 
     class Meta:
 
@@ -58,8 +69,13 @@ class Location(PublishedModel):
 class Post(PublishedModel):
     """Модель Пост."""
 
-    title = models.CharField('Заголовок', max_length=256)
-    text = models.TextField('Текст')
+    title = models.CharField(
+        'Заголовок',
+        max_length=256
+    )
+    text = models.TextField(
+        'Текст'
+    )
     pub_date = models.DateTimeField(
         'Дата и время публикации',
         help_text='Если установить дату и время в будущем '
@@ -86,10 +102,11 @@ class Post(PublishedModel):
         related_name='posts',
         verbose_name='Категория'
     )
-    image = models.ImageField('Фото к публикации',
-                              upload_to='posts_images',
-                              blank=True,
-                              )
+    image = models.ImageField(
+        'Фото к публикации',
+        upload_to='posts_images',
+        blank=True,
+    )
 
     class Meta:
 
@@ -113,17 +130,23 @@ class Post(PublishedModel):
 class Comment(models.Model):
     """Класс коммент."""
 
-    text = models.TextField('Комментарий')
+    text = models.TextField(
+        'Комментарий'
+    )
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
         related_name='comments',
         verbose_name='Пост'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    author = models.ForeignKey(User, on_delete=models.CASCADE,
-                               verbose_name='Автор публикации',
-                               related_name='comments')
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        verbose_name='Автор публикации',
+        related_name='comments'
+    )
 
     class Meta:
         """Класс мета."""
