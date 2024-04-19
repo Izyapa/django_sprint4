@@ -145,10 +145,10 @@ class PostDetailView(DetailView):
                 pk=self.kwargs.get(self.pk_url_kwarg)
             )
         return get_object_or_404(
-                queryset,
-                pk=self.kwargs.get(self.pk_url_kwarg),
-                is_published=True,
-                category__is_published=True
+            queryset,
+            pk=self.kwargs.get(self.pk_url_kwarg),
+            is_published=True,
+            category__is_published=True
         )
 
     def get_context_data(self, **kwargs):
