@@ -1,13 +1,8 @@
 """Модуль для описания представлений и форм блога."""
-from typing import Any
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.db.models.base import Model as Model
-from django.db.models.query import QuerySet
-from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
-from django.utils import timezone
 from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, UpdateView
 )
@@ -37,7 +32,7 @@ class CategoryList(ListView):
     def get_queryset(self):
         return filter_published_date_annotate_comments(
             self.get_category().posts
-            )
+        )
 
     def get_context_data(self, **kwargs):
         """Добавляем в контекст категорию постов."""
@@ -154,7 +149,7 @@ class PostDetailView(DetailView):
                 pk=self.kwargs.get(self.pk_url_kwarg),
                 is_published=True,
                 category__is_published=True
-            )
+        )
 
     def get_context_data(self, **kwargs):
         """Добавляем форму и оптимизируем запрос."""
@@ -162,7 +157,7 @@ class PostDetailView(DetailView):
             form=CommentForm(),
             comments=self.object.comments.select_related('author'),
             **kwargs
-            )
+        )
 
 
 class ProfileUpdateView(LoginRequiredMixin, FormView):
