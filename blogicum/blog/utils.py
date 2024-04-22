@@ -7,12 +7,12 @@ def filter_annotate(posts, filter=False, annotate=True):
     """Выбор актуальных публичных постов."""
     if annotate:
         posts = posts.annotate(
-                    comment_count=Count('comments')
-                ).order_by('-pub_date')
+            comment_count=Count('comments')
+        ).order_by('-pub_date')
     if filter:
         posts = posts.filter(
-                is_published=True,
-                pub_date__lte=timezone.now(),
-                category__is_published=True
-            )
+            is_published=True,
+            pub_date__lte=timezone.now(),
+            category__is_published=True
+        )
     return posts
