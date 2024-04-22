@@ -10,8 +10,7 @@ from django.views.generic.edit import FormView
 
 from blog.forms import PostCreateForm, CommentForm, ProfileForm
 from blog.models import Post, Comment, Category
-from blog.utils import (
-    annotate_comments_and_order, filter_published_date_annotate_comments)
+from blog.utils import filter_annotate
 from core.mixins import OnlyAuthorMixin
 
 COUNT_PAGINATE = 10
@@ -30,8 +29,8 @@ class CategoryList(ListView):
                                  is_published=True)
 
     def get_queryset(self):
-        return filter_published_date_annotate_comments(
-            self.get_category().posts
+        return filter_annotate(
+            self.get_category().posts, filter=True
         )
 
     def get_context_data(self, **kwargs):
@@ -45,7 +44,7 @@ class Index(ListView):
     template_name = 'blog/index.html'
     model = Post
     paginate_by = COUNT_PAGINATE
-    queryset = filter_published_date_annotate_comments(Post.objects)
+    queryset = filter_annotate(Post.objects, filter=True)
 
 
 class ProfileDetailView(ListView):
@@ -60,9 +59,9 @@ class ProfileDetailView(ListView):
 
     def get_queryset(self):
         """Выбор постов по автору, добавляем кол-во комментариев."""
-        if self.get_author() == self.request.user:
-            return annotate_comments_and_order(self.get_author().posts.all())
-        return filter_published_date_annotate_comments(Post.objects)
+        if self.get_author() != self.request.user:
+            return filter_annotate(Post.objects, filter=True)
+        return filter_annotate(self.get_author().posts.all())
 
     def get_context_data(self, **kwargs):
         """Добавляем в контекст данные профиля."""
@@ -138,17 +137,15 @@ class PostDetailView(DetailView):
 
     def get_object(self, queryset=None):
         queryset = self.get_queryset()
-        obj = super().get_object(queryset=queryset)
-        if self.request.user == obj.author:
+        post = super().get_object(queryset=self.get_queryset())
+        if self.request.user == post.author:
             return get_object_or_404(
                 queryset,
                 pk=self.kwargs.get(self.pk_url_kwarg)
             )
         return get_object_or_404(
-            queryset,
+            filter_annotate(queryset, filter=True, annotate=False),
             pk=self.kwargs.get(self.pk_url_kwarg),
-            is_published=True,
-            category__is_published=True
         )
 
     def get_context_data(self, **kwargs):
@@ -195,10 +192,11 @@ class PostDeleteView(OnlyAuthorMixin, DeleteView):
 
     def get_context_data(self, **kwargs):
         """Добавление формы с instance в контекст."""
-        form = PostCreateForm(
-            instance=get_object_or_404(Post,
-                                       author=self.request.user))
-        return super().get_context_data(form=form, **kwargs)
+        return super().get_context_data(
+            form=PostCreateForm(
+                instance=get_object_or_404(
+                    Post,
+                    author=self.request.user)), **kwargs)
 
     def get_success_url(self):
         """Переадресация."""
@@ -215,9 +213,7 @@ class CommentDeleteView(OnlyAuthorMixin, DeleteView):
     pk_url_kwarg = 'comment_id'
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['deleting'] = True
-        return context
+        return super().get_context_data(deleting=True, **kwargs)
 
     def get_success_url(self):
         return reverse('blog:post_detail',
