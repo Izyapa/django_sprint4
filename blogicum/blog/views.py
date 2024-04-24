@@ -1,7 +1,6 @@
 """Модуль для описания представлений и форм блога."""
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.db.models.base import Model as Model
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import (
