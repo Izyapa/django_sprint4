@@ -1,6 +1,9 @@
 """Модуль для описания представлений и форм блога."""
+from typing import Any
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.db.models.base import Model as Model
+from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views.generic import (
@@ -157,10 +160,11 @@ class PostDetailView(DetailView):
         )
 
 
-class ProfileUpdateView(LoginRequiredMixin, FormView):
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     """Редактирование профиля."""
 
     form_class = ProfileForm
+    model = User
     template_name = 'blog/user.html'
 
     def get_success_url(self):
@@ -168,19 +172,8 @@ class ProfileUpdateView(LoginRequiredMixin, FormView):
         return reverse('blog:profile',
                        args=[self.request.user.username])
 
-    def form_valid(self, form):
-        """Сохранение формы и перенаправление на страницу профиля."""
-        form.save()
-        return redirect(self.get_success_url())
-
-    def get_form_kwargs(self):
-        """Получение аргументов для инициализации формы."""
-        kwargs = super().get_form_kwargs()
-        kwargs['instance'] = self.request.user
-        return kwargs
-
-    def get_context_data(self, **kwargs):
-        return super().get_context_data(profile=self.request.user, **kwargs)
+    def get_object(self):
+        return self.request.user
 
 
 class PostDeleteView(OnlyAuthorMixin, DeleteView):
