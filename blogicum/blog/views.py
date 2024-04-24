@@ -1,15 +1,12 @@
 """Модуль для описания представлений и форм блога."""
-from typing import Any
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.db.models.base import Model as Model
-from django.db.models.query import QuerySet
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, UpdateView
 )
-from django.views.generic.edit import FormView
 
 from blog.forms import PostCreateForm, CommentForm, ProfileForm
 from blog.models import Post, Comment, Category
