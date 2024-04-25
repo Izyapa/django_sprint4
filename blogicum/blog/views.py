@@ -1,6 +1,6 @@
 """Модуль для описания представлений и форм блога."""
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import (
@@ -9,52 +9,73 @@ from django.views.generic import (
 
 from blog.forms import PostCreateForm, CommentForm, ProfileForm
 from blog.models import Post, Comment, Category
-from blog.utils import filter_annotate
+from blog.pagination import filter_annotate
 from core.mixins import OnlyAuthorMixin
 
 COUNT_PAGINATE = 10
 
 
-class CategoryList(ListView):
-    """Вывод постов по категории."""
+class CommentActionMixin:
+    """Миксин для действий с комментариями."""
 
-    template_name = 'blog/category.html'
+    model = Comment
+    template_name = 'blog/comment.html'
+    pk_url_kwarg = 'comment_id'
+    GET_SLUG_PARAM = 'post_id'
+    REVERSE_ADRES = 'blog:post_detail'
+
+    def get_success_url(self):
+        """Получить URL для переадресации."""
+        return reverse(self.REVERSE_ADRES,
+                       args=[self.kwargs.get(self.GET_SLUG_PARAM)])
+
+
+class PostListMixin:
+    """Миксин для действий с комментариями."""
+
     model = Post
     paginate_by = COUNT_PAGINATE
 
+
+class CategoryList(PostListMixin, ListView):
+    """Вывод постов по категории."""
+
+    CATEGORY_SLUG_PARAM = 'category_slug'
+    template_name = 'blog/category.html'
+
     def get_category(self):
-        return get_object_or_404(Category,
-                                 slug=self.kwargs['category_slug'],
-                                 is_published=True)
+        if not hasattr(self, '_category'):
+            self._category = get_object_or_404(Category,
+                                               slug=self.kwargs[self.CATEGORY_SLUG_PARAM],
+                                               is_published=True)
+        return self._category
 
     def get_queryset(self):
-        return filter_annotate(
-            self.get_category().posts, filter=True
-        )
+        category = self.get_category()
+        return filter_annotate(category.posts, filter=True)
 
     def get_context_data(self, **kwargs):
         """Добавляем в контекст категорию постов."""
-        return super().get_context_data(category=self.get_category(), **kwargs)
+        kwargs['category'] = self.get_category()
+        return super().get_context_data(**kwargs)
 
 
-class Index(ListView):
+class Index(PostListMixin, ListView):
     """Вывод постов на главную страницу."""
 
     template_name = 'blog/index.html'
-    model = Post
-    paginate_by = COUNT_PAGINATE
     queryset = filter_annotate(Post.objects, filter=True)
 
 
-class ProfileDetailView(ListView):
+class ProfileDetailView(PostListMixin, ListView):
     """Вывод постов на страницу профиля."""
 
     template_name = 'blog/profile.html'
-    model = Post
-    paginate_by = COUNT_PAGINATE
+    PROFILE_SLUG_PARAM = 'username'
 
     def get_author(self):
-        return get_object_or_404(User, username=self.kwargs['username'])
+        return get_object_or_404(get_user_model(),
+                                 username=self.kwargs[self.PROFILE_SLUG_PARAM])
 
     def get_queryset(self):
         """Выбор постов по автору, добавляем кол-во комментариев."""
@@ -73,6 +94,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
     form_class = PostCreateForm
     template_name = 'blog/create.html'
+    REVERSE_ADRES = 'blog:profile'
 
     def form_valid(self, form):
         """Подставим значение поля автор из urls."""
@@ -80,8 +102,8 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:profile',
-                       args=[self.request.user.username])
+        return reverse(self.REVERSE_ADRES,
+                       args=(self.request.user.username,))
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
@@ -90,18 +112,20 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     model = Comment
     form_class = CommentForm
     template_name = 'blog/detail.html'
+    GET_SLUG_PARAM = 'post_id'
+    REVERSE_ADRES = 'blog:post_detail'
 
     def form_valid(self, form):
         """Подставляем в форму значения автора и поста."""
-        post = get_object_or_404(Post, pk=self.kwargs.get('post_id'))
+        post = get_object_or_404(Post, pk=self.kwargs.get(self.GET_SLUG_PARAM))
         form.instance.post = post
         form.instance.author = self.request.user
         return super().form_valid(form)
 
     def get_success_url(self):
         """Переадресация."""
-        return reverse('blog:post_detail',
-                       args=[self.kwargs.get('post_id')])
+        return reverse(self.REVERSE_ADRES,
+                       args=[self.kwargs.get(self.GET_SLUG_PARAM)])
 
 
 class PostUpdateView(OnlyAuthorMixin, UpdateView):
@@ -113,18 +137,10 @@ class PostUpdateView(OnlyAuthorMixin, UpdateView):
     pk_url_kwarg = 'post_id'
 
 
-class CommentUpdateView(OnlyAuthorMixin, UpdateView):
+class CommentUpdateView(OnlyAuthorMixin, CommentActionMixin, UpdateView):
     """Редактирование комментария."""
 
-    model = Comment
     form_class = CommentForm
-    template_name = 'blog/comment.html'
-    pk_url_kwarg = 'comment_id'
-
-    def get_success_url(self):
-        """Переадресация."""
-        return reverse('blog:post_detail',
-                       args=[self.kwargs.get('post_id')])
 
 
 class PostDetailView(DetailView):
@@ -136,7 +152,7 @@ class PostDetailView(DetailView):
 
     def get_object(self, queryset=None):
         queryset = self.get_queryset()
-        post = super().get_object(queryset=self.get_queryset())
+        post = super().get_object(queryset=queryset)
         if self.request.user == post.author:
             return get_object_or_404(
                 queryset,
@@ -160,13 +176,14 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     """Редактирование профиля."""
 
     form_class = ProfileForm
-    model = User
+    model = get_user_model()
     template_name = 'blog/user.html'
+    REVERSE_ADRES = 'blog:profile'
 
     def get_success_url(self):
         """Получение URL для перенаправления при успешной валидации формы."""
-        return reverse('blog:profile',
-                       args=[self.request.user.username])
+        return reverse(self.REVERSE_ADRES,
+                       args=(self.request.user.username,))
 
     def get_object(self):
         return self.request.user
@@ -178,6 +195,7 @@ class PostDeleteView(OnlyAuthorMixin, DeleteView):
     model = Post
     template_name = 'blog/create.html'
     pk_url_kwarg = 'post_id'
+    REVERSE_ADRES = 'blog:profile'
 
     def get_context_data(self, **kwargs):
         """Добавление формы с instance в контекст."""
@@ -189,21 +207,13 @@ class PostDeleteView(OnlyAuthorMixin, DeleteView):
 
     def get_success_url(self):
         """Переадресация."""
-        return reverse('blog:profile',
+        return reverse(self.REVERSE_ADRES,
                        kwargs={'username': self.request.user.username})
 
 
-class CommentDeleteView(OnlyAuthorMixin, DeleteView):
+class CommentDeleteView(OnlyAuthorMixin, CommentActionMixin, DeleteView):
     """Удаление комментария."""
 
-    model = Comment
-    template_name = 'blog/comment.html'
-    context_object_name = 'comment'
-    pk_url_kwarg = 'comment_id'
-
     def get_context_data(self, **kwargs):
+        """Получить контекст данных."""
         return super().get_context_data(deleting=True, **kwargs)
-
-    def get_success_url(self):
-        return reverse('blog:post_detail',
-                       args=[self.kwargs.get('post_id')])

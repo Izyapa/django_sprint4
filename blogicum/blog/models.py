@@ -140,12 +140,14 @@ class Comment(models.Model):
         verbose_name='Пост'
     )
     created_at = models.DateTimeField(
-        auto_now_add=True
+        'Добавлено',
+        auto_now_add=True,
+        auto_now=False
     )
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        verbose_name='Автор публикации',
-        related_name='comments'
+        related_name='comments',
+        verbose_name='Автор публикации'
     )
 
     class Meta:
