@@ -46,7 +46,9 @@ class CategoryList(PostListMixin, ListView):
     def get_category(self):
         if not hasattr(self, '_category'):
             self._category = get_object_or_404(Category,
-                                               slug=self.kwargs[self.CATEGORY_SLUG_PARAM],
+                                               slug=self.kwargs[
+                                                   self.CATEGORY_SLUG_PARAM
+                                                   ],
                                                is_published=True)
         return self._category
 
