@@ -1,10 +1,6 @@
 """Модуль для описания представлений и форм блога."""
-from typing import Any
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
-from django.db.models.base import Model as Model
-from django.db.models.query import QuerySet
-from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import (
@@ -16,8 +12,6 @@ from blog.models import Post, Comment, Category
 from blog.pagination import filter_annotate
 from core.mixins import OnlyAuthorMixin
 from .cbv_mixins import CommentActionMixin, PostListMixin
-from django.utils import timezone
-from django.http import Http404
 
 User = get_user_model()
 
@@ -113,7 +107,8 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         """Переадресация."""
-        return reverse(self.REVERSE_ADRES, args=[self.kwargs.get(self.GET_SLUG_PARAM)])
+        return reverse(self.REVERSE_ADRES,
+                       args=[self.kwargs.get(self.GET_SLUG_PARAM)])
 
 
 class PostUpdateView(OnlyAuthorMixin, UpdateView):
