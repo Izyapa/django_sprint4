@@ -4,14 +4,9 @@ from django.db import models
 from django.urls import reverse
 
 
-class PublishedModel(models.Model):
+class TimeModel(models.Model):
     """Абстрактная модель. Добвляет флаг is_published и created_at."""
 
-    is_published = models.BooleanField(
-        'Опубликовано',
-        default=True,
-        help_text='Снимите галочку, чтобы скрыть публикацию.'
-    )
     created_at = models.DateTimeField(
         'Добавлено',
         auto_now_add=True,
@@ -23,7 +18,21 @@ class PublishedModel(models.Model):
         abstract = True
 
 
-class Category(PublishedModel):
+class PublishedTimeModel(TimeModel, models.Model):
+    """Абстрактная модель. Добвляет флаг is_published и created_at."""
+
+    is_published = models.BooleanField(
+        'Опубликовано',
+        default=True,
+        help_text='Снимите галочку, чтобы скрыть публикацию.'
+    )
+
+    class Meta:
+
+        abstract = True
+
+
+class Category(PublishedTimeModel):
     """Модель Категория."""
 
     title = models.CharField(
@@ -48,7 +57,7 @@ class Category(PublishedModel):
         return self.title[:10]
 
 
-class Location(PublishedModel):
+class Location(PublishedTimeModel):
     """Модель Локация."""
 
     name = models.CharField(
@@ -66,7 +75,7 @@ class Location(PublishedModel):
         return self.name[:10]
 
 
-class Post(PublishedModel):
+class Post(PublishedTimeModel):
     """Модель Пост."""
 
     title = models.CharField(
@@ -127,7 +136,7 @@ class Post(PublishedModel):
         return reverse('blog:post_detail', kwargs={'post_id': self.pk})
 
 
-class Comment(models.Model):
+class Comment(TimeModel, models.Model):
     """Класс коммент."""
 
     text = models.TextField(
@@ -138,11 +147,6 @@ class Comment(models.Model):
         on_delete=models.CASCADE,
         related_name='comments',
         verbose_name='Пост'
-    )
-    created_at = models.DateTimeField(
-        'Добавлено',
-        auto_now_add=True,
-        auto_now=False
     )
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,

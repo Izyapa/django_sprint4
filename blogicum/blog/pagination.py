@@ -1,4 +1,4 @@
-"""Импорт модулей."""
+"""Модуль для фильтрации и аннотации запросов к моделям Django."""
 from django.db.models import Count
 from django.utils import timezone
 
