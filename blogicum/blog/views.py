@@ -168,27 +168,25 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
 
-class PostDeleteView(OnlyAuthorMixin, DeleteView): 
-    """Удаление поста.""" 
+class PostDeleteView(OnlyAuthorMixin, DeleteView):
+    """Удаление поста."""
 
-    model = Post 
-    template_name = 'blog/create.html' 
-    pk_url_kwarg = 'post_id' 
-    REVERSE_ADRES = 'blog:profile' 
+    model = Post
+    template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
+    REVERSE_ADRES = 'blog:profile'
 
-    def get_context_data(self, **kwargs): 
+    def get_context_data(self, **kwargs):
         """Добавление формы с instance в контекст."""
+        return super().get_context_data(
+            form=PostCreateForm(
+                instance=get_object_or_404(
+                    Post,
+                    author=self.request.user)), **kwargs)
 
-        return super().get_context_data( 
-            form=PostCreateForm( 
-                instance=get_object_or_404( 
-                    Post, 
-                    author=self.request.user)), **kwargs) 
-
-    def get_success_url(self): 
-        """Переадресация.""" 
-
-        return reverse(self.REVERSE_ADRES, 
+    def get_success_url(self):
+        """Переадресация."""
+        return reverse(self.REVERSE_ADRES,
                        kwargs={'username': self.request.user.username})
 
 
