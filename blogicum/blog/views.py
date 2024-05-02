@@ -66,7 +66,9 @@ class ProfileDetailView(SingleObjectMixin, ListView):
         return context
 
     def get_queryset(self):
-        queryset = filter_annotate(self.object.posts.all().select_related('category'), annotate=True)
+        queryset = filter_annotate(
+            self.object.posts.all().select_related('category'), annotate=True
+        )
         if self.request.user != self.object:
             queryset = filter_annotate(queryset, filter=True)
         return queryset
@@ -103,7 +105,9 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         """Подставляем в форму значения автора и поста."""
         post = get_object_or_404(Post, pk=self.kwargs.get(self.GET_SLUG_PARAM))
         if self.request.user != post.author:
-            post = get_object_or_404(filter_annotate(Post.objects.filter(pk=post.pk), filter=True))
+            post = get_object_or_404(
+                filter_annotate(Post.objects.filter(pk=post.pk), filter=True)
+            )
         form.instance.post = post
         form.instance.author = self.request.user
         return super().form_valid(form)
