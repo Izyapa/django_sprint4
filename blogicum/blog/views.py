@@ -196,7 +196,7 @@ class PostDeleteView(OnlyAuthorMixin, DeleteView):
             pk=self.kwargs.get(self.pk_url_kwarg)
         ))
         return context
-# DFE
+
 
 class CommentDeleteView(OnlyAuthorMixin, CommentActionMixin, DeleteView):
     """Удаление комментария."""
