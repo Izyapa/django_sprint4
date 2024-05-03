@@ -1,4 +1,5 @@
 """Модуль для описания представлений и форм блога."""
+from typing import Any
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
@@ -48,11 +49,10 @@ class CategoryList(PostListMixin, ListView):
         return super().get_context_data(**kwargs)
 
 
-class ProfileDetailView(SingleObjectMixin, ListView):
+class ProfileDetailView(SingleObjectMixin, PostListMixin, ListView):
     """Вывод постов на страницу профиля."""
 
     template_name = 'blog/profile.html'
-    paginate_by = 10
     slug_url_kwarg = 'username'
     slug_field = 'username'
 
@@ -184,18 +184,18 @@ class PostDeleteView(OnlyAuthorMixin, DeleteView):
     pk_url_kwarg = 'post_id'
     REVERSE_ADRES = 'blog:profile'
 
-    def get_object(self):
-        queryset = self.get_queryset()
-        post = super().get_object()
-        if self.request.user != post.author:
-            return super().get_object(filter_annotate(queryset,
-                                                      filter=True,
-                                                      annotate=False))
-        return post
-
     def get_success_url(self):
         return reverse(self.REVERSE_ADRES,
-                       kwargs={'username': self.request.user.username})
+                       args=(self.request.user.username,))
+
+    def get_context_data(self, **kwargs):
+        """Добавляет в контекст сведения о форме."""
+        context = super().get_context_data(**kwargs)
+        context['form'] = PostCreateForm(instance=get_object_or_404(
+            Post,
+            pk=self.kwargs.get(self.pk_url_kwarg)
+        ))
+        return context
 
 
 class CommentDeleteView(OnlyAuthorMixin, CommentActionMixin, DeleteView):
